@@ -5,7 +5,7 @@ add_executable(
     )
 
 set_target_properties(unit_tests PROPERTIES CUDA_SEPARABLE_COMPILATION ON)
-target_link_libraries(unit_tests PRIVATE ${CUDA_LIBRARIES} gtest_main expspmm cusparse curand cuda cublas)
+target_link_libraries(unit_tests PRIVATE ${CUDA_LIBRARIES} gtest_main expspmm cusparse curand cuda)
 
 add_test(
   NAME

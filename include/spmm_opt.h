@@ -1,7 +1,6 @@
 #ifndef SpMM_OPT_H
 #define SpMM_OPT_H
 #include "spmm_base.h"
-#include "cublas_v2.h"
 
 class SpMMOpt : public SpMM
 {
@@ -12,7 +11,6 @@ public:
     virtual void preprocess(float *vin, float *vout);
 
     virtual void run(float *vin, float *vout);
-    
-    cublasHandle_t handle = 0;
+
 };
 #endif
