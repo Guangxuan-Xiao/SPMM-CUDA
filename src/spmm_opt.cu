@@ -2,9 +2,8 @@
 #include <stdio.h>
 #include <cuda.h>
 
-const int BLOCK_X = 16;
+const int BLOCK_X = 32;
 const int BLOCK_Y = 32;
-const int NUM_THREADS = BLOCK_X * BLOCK_Y;
 
 inline int ceil_div(int a, int b)
 {
@@ -31,26 +30,29 @@ __global__ void spmm_kernel_opt(int *ptr, int *idx, float *val, float *vin, floa
 
 __global__ void spmm_kernel_merge(int *ptr, int *idx, float *val, float *vin, float *vout, int num_v, int feat_in)
 {
-    int tid = blockDim.x * blockIdx.x + threadIdx.x;
-    int x = tid / BLOCK_Y;
-    if (x >= num_v)
+    int x = blockDim.x * blockIdx.x + threadIdx.x;
+    int y = blockDim.y * blockIdx.y + threadIdx.y;
+    // if (x == 0 && y == 0)
+    // {
+    //     printf("gridDim = <%d, %d, %d>\n", gridDim.x, gridDim.y, gridDim.z);
+    //     printf("blockDim = <%d, %d, %d>\n", blockDim.x, blockDim.y, blockDim.z);
+    // }
+    if (x >= feat_in || y >= num_v)
         return;
-    int lane_id = tid & (BLOCK_Y - 1);
-    int y = blockIdx.y * BLOCK_Y + lane_id;
-    int out_idx = x * feat_in + y;
-    const float *vin_offset = vin + y;
 
-    int begin = __ldg(ptr + x), end = __ldg(ptr + x + 1);
+    int out_idx = y * feat_in + x;
+    vin += x;
+    int begin = __ldg(ptr + y), end = __ldg(ptr + y + 1);
 
-    float result = 0.f, v = 0.f;
-    float val_temp[BLOCK_Y];
-    float mul_temp[BLOCK_Y];
-    int col_temp[BLOCK_Y];
+    float result = 0.f, v;
+    float val_temp[BLOCK_X];
+    float mul_temp[BLOCK_X];
+    int col_temp[BLOCK_X];
 
     int ii, col;
     for (int i = begin; i < end; i += BLOCK_X)
     {
-        ii = i + lane_id;
+        ii = i + threadIdx.x;
         if (ii < end)
         {
             col = __ldg(idx + ii) * feat_in;
@@ -66,7 +68,7 @@ __global__ void spmm_kernel_merge(int *ptr, int *idx, float *val, float *vin, fl
         {
             col_temp[j] = __shfl_sync(0xFFFFFFFF, col, j);
             val_temp[j] = __shfl_sync(0xFFFFFFFF, v, j);
-            mul_temp[j] = val_temp[j] * __ldg(vin_offset + col_temp[j]);
+            mul_temp[j] = val_temp[j] * __ldg(vin + col_temp[j]);
         }
 #pragma unroll
         for (int j = 0; j < BLOCK_X; ++j)
@@ -80,11 +82,11 @@ __global__ void spmm_kernel_merge(int *ptr, int *idx, float *val, float *vin, fl
 void SpMMOpt::preprocess(float *vin, float *vout)
 {
     // dbg("TODO");
-    grid.x = ceil_div(num_v, BLOCK_X);
-    grid.y = ceil_div(feat_in, BLOCK_Y);
+    grid.x = ceil_div(feat_in, BLOCK_X);
+    grid.y = ceil_div(num_v, BLOCK_Y);
     grid.z = 1;
-    block.x = NUM_THREADS;
-    block.y = 1;
+    block.x = BLOCK_X;
+    block.y = BLOCK_Y;
     block.z = 1;
 }
 
