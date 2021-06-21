@@ -1,7 +1,7 @@
 #include "spmm_opt.h"
 #include <stdio.h>
 #include <cuda.h>
-
+#include <cuda_profiler_api.h>
 const int BLOCK_X = 4;
 const int BLOCK_Y = 32;
 const int NUM_THREADS = BLOCK_X * BLOCK_Y;
@@ -95,5 +95,7 @@ void SpMMOpt::run(float *vin, float *vout)
     // printf("num_v = %d, feat_in = %d\n", num_v, feat_in);
     // printf("Grid = <%d, %d, %d>\n", grid.x, grid.y, grid.z);
     // printf("Block = <%d, %d, %d>\n", block.x, block.y, block.z);
+    cudaProfilerStart();
     spmm_kernel_merge<<<grid, block>>>(d_ptr, d_idx, d_val, vin, vout, num_v, feat_in);
+    cudaProfilerStop();
 }
