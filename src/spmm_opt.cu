@@ -2,7 +2,7 @@
 #include <stdio.h>
 #include <cuda.h>
 
-const int BLOCK_X = 16;
+const int BLOCK_X = 4;
 const int BLOCK_Y = 32;
 const int NUM_THREADS = BLOCK_X * BLOCK_Y;
 
