@@ -11,7 +11,7 @@ inline int ceil_div(int a, int b)
     return (a + b - 1) / b;
 }
 
-__global__ void spmm_kernel_opt(int *ptr, int *idx, float *val, float *vin, float *vout, int num_v, int feat_in)
+__global__ void spmm_kernel_notopt(int *ptr, int *idx, float *val, float *vin, float *vout, int num_v, int feat_in)
 {
     int tid = blockIdx.x * blockDim.x + threadIdx.x;
     if (tid >= num_v)
