@@ -95,7 +95,5 @@ void SpMMOpt::run(float *vin, float *vout)
     // printf("num_v = %d, feat_in = %d\n", num_v, feat_in);
     // printf("Grid = <%d, %d, %d>\n", grid.x, grid.y, grid.z);
     // printf("Block = <%d, %d, %d>\n", block.x, block.y, block.z);
-    cudaProfilerStart();
     spmm_kernel_merge<<<grid, block>>>(d_ptr, d_idx, d_val, vin, vout, num_v, feat_in);
-    cudaProfilerStop();
 }
