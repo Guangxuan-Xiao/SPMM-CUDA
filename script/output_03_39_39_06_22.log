@@ -1,0 +1,65 @@
+[..1271/PA4/src/util.cu:73 (argParse)] dset = "arxiv" (std::string)
+[..1271/PA4/src/data.cu:5 (load_graph)] loading
+Cuda failure: 100
+/home/course/hpc/users/2018011271/PA4/test/main.cpp:11
+Aborting...
+[..1271/PA4/src/util.cu:73 (argParse)] dset = "collab" (std::string)
+[..1271/PA4/src/data.cu:5 (load_graph)] loading
+Cuda failure: 100
+/home/course/hpc/users/2018011271/PA4/test/main.cpp:11
+Aborting...
+[..1271/PA4/src/util.cu:73 (argParse)] dset = "citation" (std::string)
+[..1271/PA4/src/data.cu:5 (load_graph)] loading
+Cuda failure: 100
+/home/course/hpc/users/2018011271/PA4/test/main.cpp:11
+Aborting...
+[..1271/PA4/src/util.cu:73 (argParse)] dset = "ddi" (std::string)
+[..1271/PA4/src/data.cu:5 (load_graph)] loading
+Cuda failure: 100
+/home/course/hpc/users/2018011271/PA4/test/main.cpp:11
+Aborting...
+[..1271/PA4/src/util.cu:73 (argParse)] dset = "protein" (std::string)
+[..1271/PA4/src/data.cu:5 (load_graph)] loading
+Cuda failure: 100
+/home/course/hpc/users/2018011271/PA4/test/main.cpp:11
+Aborting...
+[..1271/PA4/src/util.cu:73 (argParse)] dset = "ppa" (std::string)
+[..1271/PA4/src/data.cu:5 (load_graph)] loading
+Cuda failure: 100
+/home/course/hpc/users/2018011271/PA4/test/main.cpp:11
+Aborting...
+[..1271/PA4/src/util.cu:73 (argParse)] dset = "reddit.dgl" (std::string)
+[..1271/PA4/src/data.cu:5 (load_graph)] loading
+Cuda failure: 100
+/home/course/hpc/users/2018011271/PA4/test/main.cpp:11
+Aborting...
+[..1271/PA4/src/util.cu:73 (argParse)] dset = "products" (std::string)
+[..1271/PA4/src/data.cu:5 (load_graph)] loading
+Cuda failure: 100
+/home/course/hpc/users/2018011271/PA4/test/main.cpp:11
+Aborting...
+[..1271/PA4/src/util.cu:73 (argParse)] dset = "youtube" (std::string)
+[..1271/PA4/src/data.cu:5 (load_graph)] loading
+Cuda failure: 100
+/home/course/hpc/users/2018011271/PA4/test/main.cpp:11
+Aborting...
+[..1271/PA4/src/util.cu:73 (argParse)] dset = "amazon_cogdl" (std::string)
+[..1271/PA4/src/data.cu:5 (load_graph)] loading
+Cuda failure: 100
+/home/course/hpc/users/2018011271/PA4/test/main.cpp:11
+Aborting...
+[..1271/PA4/src/util.cu:73 (argParse)] dset = "yelp" (std::string)
+[..1271/PA4/src/data.cu:5 (load_graph)] loading
+Cuda failure: 100
+/home/course/hpc/users/2018011271/PA4/test/main.cpp:11
+Aborting...
+[..1271/PA4/src/util.cu:73 (argParse)] dset = "wikikg2" (std::string)
+[..1271/PA4/src/data.cu:5 (load_graph)] loading
+Cuda failure: 100
+/home/course/hpc/users/2018011271/PA4/test/main.cpp:11
+Aborting...
+[..1271/PA4/src/util.cu:73 (argParse)] dset = "am" (std::string)
+[..1271/PA4/src/data.cu:5 (load_graph)] loading
+Cuda failure: 100
+/home/course/hpc/users/2018011271/PA4/test/main.cpp:11
+Aborting...

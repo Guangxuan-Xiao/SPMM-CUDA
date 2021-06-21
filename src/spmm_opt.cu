@@ -2,7 +2,8 @@
 #include <stdio.h>
 #include <cuda.h>
 #include <cuda_profiler_api.h>
-const int BLOCK_X = 4;
+#include <string.h>
+const int BLOCK_X = 32;
 const int BLOCK_Y = 32;
 const int NUM_THREADS = BLOCK_X * BLOCK_Y;
 
@@ -32,51 +33,53 @@ __global__ void spmm_kernel_notopt(int *ptr, int *idx, float *val, float *vin, f
 __global__ void spmm_kernel_merge(int *ptr, int *idx, float *val, float *vin, float *vout, int num_v, int feat_in)
 {
     int tid = blockDim.x * blockIdx.x + threadIdx.x;
-    if (tid == 0) {
-        printf("GridDim = <%d, %d, %d>\n", gridDim.x, gridDim.y, gridDim.z);
-        printf("BlockDim = <%d, %d, %d>\n", blockDim.x, blockDim.y, blockDim.z);
-    }
+    // if (tid == 0) {
+    //     printf("GridDim = <%d, %d, %d>\n", gridDim.x, gridDim.y, gridDim.z);
+    //     printf("BlockDim = <%d, %d, %d>\n", blockDim.x, blockDim.y, blockDim.z);
+    // }
     int x = tid / BLOCK_Y;
     if (x >= num_v)
         return;
+    int line_id = threadIdx.x / BLOCK_Y;
     int lane_id = tid & (BLOCK_Y - 1);
     int y = blockIdx.y * BLOCK_Y + lane_id;
     int out_idx = x * feat_in + y;
     const float *vin_offset = vin + y;
 
     int begin = __ldg(ptr + x), end = __ldg(ptr + x + 1);
-
+    int nnz = end - begin;
     float result = 0.f, v = 0.f;
-    float val_temp[BLOCK_Y];
-    float mul_temp[BLOCK_Y];
-    int col_temp[BLOCK_Y];
+    // float mul_temp[BLOCK_Y];
+    __shared__ float val_temp[BLOCK_X][BLOCK_Y];
+    __shared__ int col_temp[BLOCK_X][BLOCK_Y];
 
     int ii, col;
-    for (int i = begin; i < end; i += BLOCK_X)
+    for (int i = begin; i < end; i += BLOCK_Y)
     {
         ii = i + lane_id;
         if (ii < end)
         {
-            col = __ldg(idx + ii) * feat_in;
-            v = __ldg(val + ii);
+            col_temp[line_id][lane_id] = __ldg(idx + ii) * feat_in;
+            val_temp[line_id][lane_id] = __ldg(val + ii);
+            // ++val[ii];
         }
         else
         {
-            col = 0;
-            v = 0;
+            col_temp[line_id][lane_id] = 0;
+            val_temp[line_id][lane_id] = 0;
         }
+        // __syncthreads();
 #pragma unroll
-        for (int j = 0; j < BLOCK_X; ++j)
+        for (int j = 0; j < BLOCK_Y; ++j)
         {
-            col_temp[j] = __shfl_sync(0xFFFFFFFF, col, j);
-            val_temp[j] = __shfl_sync(0xFFFFFFFF, v, j);
-            mul_temp[j] = val_temp[j] * __ldg(vin_offset + col_temp[j]);
+            if (val_temp[line_id][j])
+                result += val_temp[line_id][j] * __ldg(vin_offset + col_temp[line_id][j]);
         }
-#pragma unroll
-        for (int j = 0; j < BLOCK_X; ++j)
-        {
-            result += mul_temp[j];
-        }
+// #pragma unroll
+//         for (int j = 0; j < BLOCK_X; ++j)
+//         {
+//             result += mul_temp[j];
+//         }
     }
     vout[out_idx] = result;
 }
@@ -96,8 +99,18 @@ void SpMMOpt::run(float *vin, float *vout)
 {
     // dbg("TODO");
     // spmm_kernel_opt<<<grid, block>>>(d_ptr, d_idx, d_val, vin, vout, num_v, feat_in);
-    printf("num_v = %d, feat_in = %d\n", num_v, feat_in);
-    printf("Grid = <%d, %d, %d>\n", grid.x, grid.y, grid.z);
-    printf("Block = <%d, %d, %d>\n", block.x, block.y, block.z);
+    // printf("num_v = %d, feat_in = %d\n", num_v, feat_in);
+    // printf("Grid = <%d, %d, %d>\n", grid.x, grid.y, grid.z);
+    // printf("Block = <%d, %d, %d>\n", block.x, block.y, block.z);
+    // cudaMemset(d_val, 0, sizeof(float) * num_e);
     spmm_kernel_merge<<<grid, block>>>(d_ptr, d_idx, d_val, vin, vout, num_v, feat_in);
+    // float *val = (float *)malloc(sizeof(float) * num_e);
+    // cudaMemcpy(val, d_val, num_e * sizeof(float), cudaMemcpyDeviceToHost);
+    // float sum = 0;
+    // for (int i = 0; i < num_e; ++i)
+    // {
+    //     sum += val[i];
+    // }
+    // printf("Mean = %f\n", sum / num_e);
+    // free(val);
 }
