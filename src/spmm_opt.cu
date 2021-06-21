@@ -32,6 +32,10 @@ __global__ void spmm_kernel_notopt(int *ptr, int *idx, float *val, float *vin, f
 __global__ void spmm_kernel_merge(int *ptr, int *idx, float *val, float *vin, float *vout, int num_v, int feat_in)
 {
     int tid = blockDim.x * blockIdx.x + threadIdx.x;
+    if (tid == 0) {
+        printf("GridDim = <%d, %d, %d>\n", gridDim.x, gridDim.y, gridDim.z);
+        printf("BlockDim = <%d, %d, %d>\n", blockDim.x, blockDim.y, blockDim.z);
+    }
     int x = tid / BLOCK_Y;
     if (x >= num_v)
         return;
@@ -92,8 +96,8 @@ void SpMMOpt::run(float *vin, float *vout)
 {
     // dbg("TODO");
     // spmm_kernel_opt<<<grid, block>>>(d_ptr, d_idx, d_val, vin, vout, num_v, feat_in);
-    // printf("num_v = %d, feat_in = %d\n", num_v, feat_in);
-    // printf("Grid = <%d, %d, %d>\n", grid.x, grid.y, grid.z);
-    // printf("Block = <%d, %d, %d>\n", block.x, block.y, block.z);
+    printf("num_v = %d, feat_in = %d\n", num_v, feat_in);
+    printf("Grid = <%d, %d, %d>\n", grid.x, grid.y, grid.z);
+    printf("Block = <%d, %d, %d>\n", block.x, block.y, block.z);
     spmm_kernel_merge<<<grid, block>>>(d_ptr, d_idx, d_val, vin, vout, num_v, feat_in);
 }
