@@ -42,7 +42,7 @@ __global__ void spmm_kernel_merge(int *ptr, int *idx, float *val, float *vin, fl
     int lane_id = tid & (BLOCK_Y - 1);
     int y = blockIdx.y * BLOCK_Y + lane_id;
     int out_idx = x * feat_in + y;
-    const float *vin_offset = vin + y;
+    const float *vin_offset = vin + y * num_v;
 
     int begin = __ldg(ptr + x), end = __ldg(ptr + x + 1);
 
@@ -57,7 +57,7 @@ __global__ void spmm_kernel_merge(int *ptr, int *idx, float *val, float *vin, fl
         ii = i + lane_id;
         if (ii < end)
         {
-            col = __ldg(idx + ii) * feat_in;
+            col = __ldg(idx + ii);
             v = __ldg(val + ii);
         }
         else
@@ -90,6 +90,14 @@ void SpMMOpt::preprocess(float *vin, float *vout)
     block.x = NUM_THREADS;
     block.y = 1;
     block.z = 1;
+    cudaMalloc(&new_vin, feat_in * num_v * sizeof(float));
+    cublasCreate(&handle);
+    float alpha = 1, beta = 0;
+    cublasSgeam(handle, CUBLAS_OP_T, CUBLAS_OP_N, num_v, feat_in, &alpha, vin, feat_in,
+                        &beta,
+                        nullptr, num_v,
+                        new_vin, num_v);
+
 }
 
 void SpMMOpt::run(float *vin, float *vout)
@@ -99,5 +107,5 @@ void SpMMOpt::run(float *vin, float *vout)
     // printf("num_v = %d, feat_in = %d\n", num_v, feat_in);
     // printf("Grid = <%d, %d, %d>\n", grid.x, grid.y, grid.z);
     // printf("Block = <%d, %d, %d>\n", block.x, block.y, block.z);
-    spmm_kernel_merge<<<grid, block>>>(d_ptr, d_idx, d_val, vin, vout, num_v, feat_in);
+    spmm_kernel_merge<<<grid, block>>>(d_ptr, d_idx, d_val, new_vin, vout, num_v, feat_in);
 }
