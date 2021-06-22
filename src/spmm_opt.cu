@@ -2,7 +2,7 @@
 #include <stdio.h>
 #include <cuda.h>
 #include <cuda_profiler_api.h>
-const int BLOCK_X = 32;
+const int BLOCK_X = 16;
 const int BLOCK_Y = 32;
 const int NUM_THREADS = BLOCK_X * BLOCK_Y;
 
