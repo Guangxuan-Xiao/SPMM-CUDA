@@ -3,7 +3,8 @@
 #include <cuda.h>
 
 const int STRIDE = 32;
-const int BLOCK_X = 32;
+const int BLOCK_X = 512;
+const int X_DIV_STRIDE = BLOCK_X / STRIDE;
 const int BLOCK_Y = 8;
 inline int ceil_div(int a, int b)
 {
@@ -13,7 +14,8 @@ inline int ceil_div(int a, int b)
 __global__ void spmm_kernel_notopt(int *ptr, int *idx, float *val, float *vin, float *vout, int num_v, int INFEATURE)
 {
     int tid = blockIdx.x * blockDim.x + threadIdx.x;
-    if (tid >= num_v) return;
+    if (tid >= num_v)
+        return;
     int begin = ptr[tid], end = ptr[tid + 1];
     for (int j = 0; j < INFEATURE; ++j)
     {
@@ -25,7 +27,6 @@ __global__ void spmm_kernel_notopt(int *ptr, int *idx, float *val, float *vin, f
         vout[tid * INFEATURE + j] = result;
     }
 }
-
 
 __global__ void spmm_kernel_opt(int *ptr, int *idx, float *val, float *vin, float *vout, int num_v, int feat_in)
 {
@@ -42,15 +43,15 @@ __global__ void spmm_kernel_opt(int *ptr, int *idx, float *val, float *vin, floa
     int out_idx = y * feat_in + x;
     int begin = __ldg(ptr + y), end = __ldg(ptr + y + 1);
 
-    float result = 0.f;
+    float results[X_DIV_STRIDE] = {0};
     __shared__ float val_temp[BLOCK_Y][STRIDE];
     __shared__ int col_temp[BLOCK_Y][STRIDE];
-    float vin_temp[STRIDE];
+    float vin_temp[X_DIV_STRIDE][STRIDE];
 
     int ii;
     for (int i = begin; i < end; i += STRIDE)
     {
-        ii = i + threadIdx.x;
+        ii = threadIdx.x + i;
         if (ii < end)
         {
             col_temp[threadIdx.y][threadIdx.x] = __ldg(idx + ii) * feat_in;
@@ -65,15 +66,27 @@ __global__ void spmm_kernel_opt(int *ptr, int *idx, float *val, float *vin, floa
 #pragma unroll
         for (int j = 0; j < STRIDE; ++j)
         {
-            vin_temp[j] = __ldg(vin + col_temp[threadIdx.y][j] + x);
+#pragma unroll
+            for (int k = 0; k < X_DIV_STRIDE; ++k)
+            {
+                vin_temp[k][j] = __ldg(vin + col_temp[threadIdx.y][j] + x + STRIDE * k);
+            }
         }
 #pragma unroll
         for (int j = 0; j < STRIDE; ++j)
         {
-            result += val_temp[threadIdx.y][j] * vin_temp[j];
+#pragma unroll
+            for (int k = 0; k < X_DIV_STRIDE; ++k)
+            {
+                results[k] += val_temp[threadIdx.y][j] * vin_temp[k][j];
+            }
         }
     }
-    vout[out_idx] = result;
+#pragma unroll
+    for (int k = 0; k < X_DIV_STRIDE; ++k)
+    {
+        vout[out_idx + k * STRIDE] = results[k];
+    }
 }
 
 void SpMMOpt::preprocess(float *vin, float *vout)
