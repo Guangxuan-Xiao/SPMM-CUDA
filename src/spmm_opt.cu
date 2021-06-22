@@ -61,7 +61,7 @@ __global__ void spmm_kernel_opt(int *ptr, int *idx, float *val, float *vin, floa
             col_temp[threadIdx.y][threadIdx.x] = 0;
             val_temp[threadIdx.y][threadIdx.x] = 0;
         }
-        __syncthreads();
+        __syncwarp();
 #pragma unroll
         for (int j = 0; j < STRIDE; ++j)
         {
