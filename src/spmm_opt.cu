@@ -1,7 +1,5 @@
 #include "spmm_opt.h"
 #include <stdio.h>
-#include <cuda.h>
-#include <cuda_profiler_api.h>
 const int BLOCK_X = 16;
 const int BLOCK_Y = 32;
 const int NUM_THREADS = BLOCK_X * BLOCK_Y;
@@ -11,31 +9,9 @@ inline int ceil_div(int a, int b)
     return (a + b - 1) / b;
 }
 
-__global__ void spmm_kernel_notopt(int *ptr, int *idx, float *val, float *vin, float *vout, int num_v, int feat_in)
-{
-    int tid = blockIdx.x * blockDim.x + threadIdx.x;
-    if (tid >= num_v)
-        return;
-    int begin = ptr[tid], end = ptr[tid + 1];
-    for (int j = 0; j < feat_in; ++j)
-    {
-        float result = 0.0f;
-        for (int i = begin; i < end; ++i)
-        {
-            // Transposing the vin maybe cache-friendly
-            result += vin[idx[i] * feat_in + j] * val[i];
-        }
-        vout[tid * feat_in + j] = result;
-    }
-}
-
-__global__ void spmm_kernel_merge(int *ptr, int *idx, float *val, float *vin, float *vout, int num_v, int feat_in)
+__global__ void spmm_kernel_opt(int *ptr, int *idx, float *val, float *vin, float *vout, int num_v, int feat_in)
 {
     int tid = blockDim.x * blockIdx.x + threadIdx.x;
-    // if (tid == 0) {
-    //     printf("GridDim = <%d, %d, %d>\n", gridDim.x, gridDim.y, gridDim.z);
-    //     printf("BlockDim = <%d, %d, %d>\n", blockDim.x, blockDim.y, blockDim.z);
-    // }
     int x = tid / BLOCK_Y;
     if (x >= num_v)
         return;
@@ -83,7 +59,6 @@ __global__ void spmm_kernel_merge(int *ptr, int *idx, float *val, float *vin, fl
 
 void SpMMOpt::preprocess(float *vin, float *vout)
 {
-    // dbg("TODO");
     grid.x = ceil_div(num_v, BLOCK_X);
     grid.y = ceil_div(feat_in, BLOCK_Y);
     grid.z = 1;
@@ -94,10 +69,5 @@ void SpMMOpt::preprocess(float *vin, float *vout)
 
 void SpMMOpt::run(float *vin, float *vout)
 {
-    // dbg("TODO");
-    // spmm_kernel_opt<<<grid, block>>>(d_ptr, d_idx, d_val, vin, vout, num_v, feat_in);
-    // printf("num_v = %d, feat_in = %d\n", num_v, feat_in);
-    // printf("Grid = <%d, %d, %d>\n", grid.x, grid.y, grid.z);
-    // printf("Block = <%d, %d, %d>\n", block.x, block.y, block.z);
-    spmm_kernel_merge<<<grid, block>>>(d_ptr, d_idx, d_val, vin, vout, num_v, feat_in);
+    spmm_kernel_opt<<<grid, block>>>(d_ptr, d_idx, d_val, vin, vout, num_v, feat_in);
 }

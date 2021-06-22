@@ -11,6 +11,5 @@ public:
     virtual void preprocess(float *vin, float *vout);
 
     virtual void run(float *vin, float *vout);
-
 };
 #endif
