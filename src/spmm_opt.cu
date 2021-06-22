@@ -2,9 +2,9 @@
 #include <stdio.h>
 #include <cuda.h>
 
+const int STRIDE = 32;
 const int BLOCK_X = 32;
-const int BLOCK_Y = 32;
-
+const int BLOCK_Y = 8;
 inline int ceil_div(int a, int b)
 {
     return (a + b - 1) / b;
@@ -41,39 +41,37 @@ __global__ void spmm_kernel_merge(int *ptr, int *idx, float *val, float *vin, fl
         return;
 
     int out_idx = y * feat_in + x;
-    vin += x;
     int begin = __ldg(ptr + y), end = __ldg(ptr + y + 1);
 
-    float result = 0.f, v;
-    float val_temp[BLOCK_X];
-    float mul_temp[BLOCK_X];
-    int col_temp[BLOCK_X];
+    float result = 0.f;
+    __shared__ float val_temp[BLOCK_Y][STRIDE];
+    __shared__ int col_temp[BLOCK_Y][STRIDE];
+    float vin_temp[STRIDE];
 
-    int ii, col;
-    for (int i = begin; i < end; i += BLOCK_X)
+    int ii;
+    for (int i = begin; i < end; i += STRIDE)
     {
         ii = i + threadIdx.x;
         if (ii < end)
         {
-            col = __ldg(idx + ii) * feat_in;
-            v = __ldg(val + ii);
+            col_temp[threadIdx.y][threadIdx.x] = __ldg(idx + ii) * feat_in;
+            val_temp[threadIdx.y][threadIdx.x] = __ldg(val + ii);
         }
         else
         {
-            col = 0;
-            v = 0;
+            col_temp[threadIdx.y][threadIdx.x] = 0;
+            val_temp[threadIdx.y][threadIdx.x] = 0;
+        }
+        __syncthreads();
+#pragma unroll
+        for (int j = 0; j < STRIDE; ++j)
+        {
+            vin_temp[j] = __ldg(vin + col_temp[threadIdx.y][j] + x);
         }
 #pragma unroll
-        for (int j = 0; j < BLOCK_X; ++j)
+        for (int j = 0; j < STRIDE; ++j)
         {
-            col_temp[j] = __shfl_sync(0xFFFFFFFF, col, j);
-            val_temp[j] = __shfl_sync(0xFFFFFFFF, v, j);
-            mul_temp[j] = val_temp[j] * __ldg(vin + col_temp[j]);
-        }
-#pragma unroll
-        for (int j = 0; j < BLOCK_X; ++j)
-        {
-            result += mul_temp[j];
+            result += val_temp[threadIdx.y][j] * vin_temp[j];
         }
     }
     vout[out_idx] = result;
@@ -85,7 +83,7 @@ void SpMMOpt::preprocess(float *vin, float *vout)
     grid.x = ceil_div(feat_in, BLOCK_X);
     grid.y = ceil_div(num_v, BLOCK_Y);
     grid.z = 1;
-    block.x = BLOCK_X;
+    block.x = STRIDE;
     block.y = BLOCK_Y;
     block.z = 1;
 }
