@@ -1,57 +1,36 @@
 #include "spmm_opt.h"
 #include <stdio.h>
-#include <cuda.h>
-
-const int BLOCK_X = 32;
+const int BLOCK_X = 16;
 const int BLOCK_Y = 32;
+const int NUM_THREADS = BLOCK_X * BLOCK_Y;
 
 inline int ceil_div(int a, int b)
 {
     return (a + b - 1) / b;
 }
 
-__global__ void spmm_kernel_notopt(int *ptr, int *idx, float *val, float *vin, float *vout, int num_v, int INFEATURE)
-{
-    int tid = blockIdx.x * blockDim.x + threadIdx.x;
-    if (tid >= num_v) return;
-    int begin = ptr[tid], end = ptr[tid + 1];
-    for (int j = 0; j < INFEATURE; ++j)
-    {
-        float result = 0.0f;
-        for (int i = begin; i < end; ++i)
-        {
-            result += vin[idx[i] * INFEATURE + j] * val[i];
-        }
-        vout[tid * INFEATURE + j] = result;
-    }
-}
-
-
 __global__ void spmm_kernel_opt(int *ptr, int *idx, float *val, float *vin, float *vout, int num_v, int feat_in)
 {
-    int x = blockDim.x * blockIdx.x + threadIdx.x;
-    int y = blockDim.y * blockIdx.y + threadIdx.y;
-    // if (x == 0 && y == 0)
-    // {
-    //     printf("gridDim = <%d, %d, %d>\n", gridDim.x, gridDim.y, gridDim.z);
-    //     printf("blockDim = <%d, %d, %d>\n", blockDim.x, blockDim.y, blockDim.z);
-    // }
-    if (x >= feat_in || y >= num_v)
+    int tid = blockDim.x * blockIdx.x + threadIdx.x;
+    int x = tid / BLOCK_Y;
+    if (x >= num_v)
         return;
+    int lane_id = tid & (BLOCK_Y - 1);
+    int y = blockIdx.y * BLOCK_Y + lane_id;
+    int out_idx = x * feat_in + y;
+    const float *vin_offset = vin + y;
 
-    int out_idx = y * feat_in + x;
-    vin += x;
-    int begin = __ldg(ptr + y), end = __ldg(ptr + y + 1);
+    int begin = __ldg(ptr + x), end = __ldg(ptr + x + 1);
 
-    float result = 0.f, v;
-    float val_temp[BLOCK_X];
-    float mul_temp[BLOCK_X];
-    int col_temp[BLOCK_X];
+    float result = 0.f, v = 0.f;
+    float val_temp[BLOCK_Y];
+    float mul_temp[BLOCK_Y];
+    int col_temp[BLOCK_Y];
 
     int ii, col;
-    for (int i = begin; i < end; i += BLOCK_X)
+    for (int i = begin; i < end; i += BLOCK_Y)
     {
-        ii = i + threadIdx.x;
+        ii = i + lane_id;
         if (ii < end)
         {
             col = __ldg(idx + ii) * feat_in;
@@ -63,14 +42,14 @@ __global__ void spmm_kernel_opt(int *ptr, int *idx, float *val, float *vin, floa
             v = 0;
         }
 #pragma unroll
-        for (int j = 0; j < BLOCK_X; ++j)
+        for (int j = 0; j < BLOCK_Y; ++j)
         {
             col_temp[j] = __shfl_sync(0xFFFFFFFF, col, j);
             val_temp[j] = __shfl_sync(0xFFFFFFFF, v, j);
-            mul_temp[j] = val_temp[j] * __ldg(vin + col_temp[j]);
+            mul_temp[j] = val_temp[j] * __ldg(vin_offset + col_temp[j]);
         }
 #pragma unroll
-        for (int j = 0; j < BLOCK_X; ++j)
+        for (int j = 0; j < BLOCK_Y; ++j)
         {
             result += mul_temp[j];
         }
@@ -80,25 +59,15 @@ __global__ void spmm_kernel_opt(int *ptr, int *idx, float *val, float *vin, floa
 
 void SpMMOpt::preprocess(float *vin, float *vout)
 {
-    // dbg("TODO");
-    grid.x = ceil_div(feat_in, BLOCK_X);
-    grid.y = ceil_div(num_v, BLOCK_Y);
+    grid.x = ceil_div(num_v, BLOCK_X);
+    grid.y = ceil_div(feat_in, BLOCK_Y);
     grid.z = 1;
-    block.x = BLOCK_X;
-    block.y = BLOCK_Y;
+    block.x = NUM_THREADS;
+    block.y = 1;
     block.z = 1;
-
-    // int BLOCK_SIZE = 128;
-    // grid.x = (num_v + BLOCK_SIZE - 1) / BLOCK_SIZE;
-    // block.x = BLOCK_SIZE;
 }
 
 void SpMMOpt::run(float *vin, float *vout)
 {
-    // dbg("TODO");
-    // printf("num_v = %d, feat_in = %d\n", num_v, feat_in);
-    // printf("Grid = <%d, %d, %d>\n", grid.x, grid.y, grid.z);
-    // printf("Block = <%d, %d, %d>\n", block.x, block.y, block.z);
     spmm_kernel_opt<<<grid, block>>>(d_ptr, d_idx, d_val, vin, vout, num_v, feat_in);
-    // spmm_kernel_notopt<<<grid, block>>>(d_ptr, d_idx, d_val, vin, vout, num_v, feat_in);
 }
