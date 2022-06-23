@@ -56,7 +56,7 @@ __global__ void spmm_kernel_opt(int *ptr, int *idx, float *val, float *vin, floa
 }
 ```
 
-![image-20210622194126332](assets/image-20210622194126332.png)
+![assets/image-20210622194126332](image-20210622194126332.png)
 
 重点优化思路来自以下两点：
 
@@ -85,7 +85,7 @@ __global__ void spmm_kernel_opt(int *ptr, int *idx, float *val, float *vin, floa
 | wikikg2      | 1.042706 | 0.529769 | 0.308868 | 0.306316 | 0.30617  |
 | am           | 0.335398 | 0.365236 | 0.335423 | 0.402923 | 0.454509 |
 
-![image-20210622195633412](assets/image-20210622195633412.png)
+![assets/image-20210622195633412](image-20210622195633412.png)
 
 在实验之外，我也检查我实现的方法的优势。通过柱状图可知，我实现的方法在稠密图（protein，reddit)上的表现优于在稀疏图（arxiv，am)上的表现。随着kLen的增大，我实现的方法逐渐弱于cuSPARSE的实现，这说明我实现的方法在稀疏矩阵的访存上还有提升的空间，主要问题应该还是负载不均衡。
 
