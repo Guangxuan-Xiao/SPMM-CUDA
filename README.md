@@ -93,11 +93,3 @@ __global__ void spmm_kernel_opt(int *ptr, int *idx, float *val, float *vin, floa
 
 1. Yang C, Buluç A, Owens J D. Design principles for sparse matrix multiplication on the gpu[C]//European Conference on Parallel Processing. Springer, Cham, 2018: 672-687.
 2. GE-SpMM: General-purposed Sparse Matrix-Matrix Multiplication on GPUs for Graph Neural Networks
-
-## 其他的一些话
-
-这项作业确实非常有意思，通过SPMM这个open problem让我学到了很多，也读了很多论文。但是其中一篇 GE-SpMM: General-purposed Sparse Matrix-Matrix Multiplication on GPUs for Graph Neural Networks，我认为他的效果明显是挑出来的，并且over-claim了。他们的代码和merge-spmm中的row split法连变量命名都差不多，却声称有1.8x的提升，实属令人疑惑。
-
-虽然成绩不太理想，距离90分还有将近2分，但这门课让我感觉到了老师和助教的诚意，学到的每一项高性能计算技术和知识都很solid，并且非常实用，能让我今后写出更好的代码。一些建议是增设习题课环节，比如UCB和Stanford这些名校开的课一般都会有TA在实验前讲解一下可能用到的工具和思路，演示如何使用Profiler等常用的工具。助教们都很熟练用这些工具，然而学生并不是，直接在网上读文档很难快速入门把工具用起来，其实用到的命令就那么几个非常简单，然而一点点去查就很痛苦。助教快速教同学们一些基础的用法比直接丢一堆名词和文档给同学看要好得多。
-
-总而言之这门课非常赞，如果有学弟学妹问我我会推荐选课，感谢翟老师和助教们提供的精彩课程！
